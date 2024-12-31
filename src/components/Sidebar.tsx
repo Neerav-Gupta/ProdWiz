@@ -5,7 +5,7 @@ import ThemeToggle from './ThemeToggle';
 import { useTheme } from '../hooks/useTheme';
 
 const menuItems = [
-  { icon: Layout, label: 'Dashboard', path: '/' },
+  { icon: Layout, label: 'Dashboard', path: '/dashboard' },
   { icon: Calendar, label: 'Calendar', path: '/calendar' },
   { icon: Users, label: 'Meetings', path: '/meetings' },
   { icon: Mail, label: 'Mail', path: '/mail' },
@@ -42,7 +42,7 @@ export default function Sidebar({ isExpanded, onToggle, isMobile, onMobileClose 
         ${isMobile ? 'translate-x-0 w-64' : '-translate-x-full'} 
         lg:translate-x-0`}
       >
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-ful">
           <div className="p-4 flex justify-between items-center border-b border-gray-700">
             <ThemeToggle />
             <div className="flex items-center space-x-2">

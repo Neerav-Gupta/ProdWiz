@@ -23,7 +23,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
           <Menu className="w-6 h-6" />
         </button>
         <h1 className={`${isDark ? 'text-white' : 'text-gray-900'} text-xl font-semibold`}>
-          My Calendar
+          ProdWiz
         </h1>
       </div>
 
@@ -43,13 +43,11 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
         <NotificationPanel 
           isOpen={notificationsOpen}
-          onClose={() => setNotificationsOpen(!notificationsOpen)}
-        />
+          onClose={() => setNotificationsOpen(!notificationsOpen)} isDark={isDark}/>
 
         <ProfileDropdown 
           isOpen={profileOpen}
-          onClose={() => setProfileOpen(!profileOpen)}
-        />
+          onClose={() => setProfileOpen(!profileOpen)} isDark={isDark}        />
       </div>
     </header>
   );

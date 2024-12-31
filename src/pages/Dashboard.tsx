@@ -2,9 +2,15 @@ import EventList from '../components/EventList';
 import Calendar from '../components/Calendar';
 import Stats from '../components/Stats';
 import { useState } from 'react';
+import { useAuth } from '../components/auth/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  if (!user) navigate('/');
+  console.log(user);
 
   return (
     <main className="p-4 md:p-6">

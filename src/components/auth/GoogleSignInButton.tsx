@@ -9,7 +9,7 @@ import {
 } from "firebase/auth";
 import AWS from 'aws-sdk';
 
-export default function GoogleSignInButton() {
+const GoogleSignInButton: React.FC = () => {
   const { isDark } = useTheme();
   const navigate = useNavigate();
 
@@ -30,18 +30,21 @@ export default function GoogleSignInButton() {
   const dynamoDB = new AWS.DynamoDB.DocumentClient();
 
   const handleSignIn = async () => {
+    let userEmail: string | null = "";
+    let userName: string | null = "";
+    let userProfileImage: string | null = "";
     try {
       await setPersistence(auth, browserLocalPersistence);
       const result = await signInWithPopup(auth, googleProvider);
       const credential = GoogleAuthProvider.credentialFromResult(result);
       const accessToken = credential?.accessToken;
-      const userEmail = result.user?.email;
-      const userName = result.user?.displayName;
-      const userProfileImage = result.user?.photoURL;
+      userEmail = result.user?.email;
+      userName = result.user?.displayName;
+      userProfileImage = result.user?.photoURL;
 
       if (!accessToken || !userEmail || !userName) {
         console.log("Access token or user email or user name not found");
-        return;
+        throw new Error("Access token or user email or user name not found");
       }
 
       console.log(userEmail, userName, userProfileImage);
@@ -55,7 +58,7 @@ export default function GoogleSignInButton() {
       console.log(userExists);
       if (userExists.Item) {
         console.log("User already exists in the Users table. Skipping...");
-        return;
+        navigate('/dashboard');
       }
       console.log("User does not exist in the Users table");
 
@@ -90,6 +93,7 @@ export default function GoogleSignInButton() {
             Section: course.section,
             Description: course.description,
             Link: course.alternateLink,
+            Type: "unknown",
           },
         };
 
@@ -156,7 +160,7 @@ export default function GoogleSignInButton() {
     } catch (e: any) {
       console.log("Error: " + e.message);
     }
-    navigate('/dashboard');
+    navigate('/settings/classes');
   };
 
   return (
@@ -189,3 +193,5 @@ export default function GoogleSignInButton() {
     </button>
   );
 }
+
+export default GoogleSignInButton;
