@@ -5,8 +5,6 @@ import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../auth/AuthContext';
 import AWS from "aws-sdk";
 
-
-
 AWS.config.update({
     region: 'us-east-2',
     accessKeyId: 'AKIAYS2NRHAYPOXDAYV6',

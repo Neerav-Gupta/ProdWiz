@@ -8,10 +8,14 @@ import {
   GoogleAuthProvider,
 } from "firebase/auth";
 import AWS from 'aws-sdk';
+import { useState } from 'react';
+import { LoadingOverlay, useLoadingPhrases } from '../loading-overlay';
 
 const GoogleSignInButton: React.FC = () => {
   const { isDark } = useTheme();
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+  const loadingPhrase = useLoadingPhrases(isLoading);
 
   const googleProvider = new GoogleAuthProvider();
   googleProvider.setCustomParameters({
@@ -30,6 +34,7 @@ const GoogleSignInButton: React.FC = () => {
   const dynamoDB = new AWS.DynamoDB.DocumentClient();
 
   const handleSignIn = async () => {
+    setIsLoading(true);
     let userEmail: string | null = "";
     let userName: string | null = "";
     let userProfileImage: string | null = "";
@@ -58,6 +63,7 @@ const GoogleSignInButton: React.FC = () => {
       console.log(userExists);
       if (userExists.Item) {
         console.log("User already exists in the Users table. Skipping...");
+        setIsLoading(false);
         navigate('/dashboard');
       }
       console.log("User does not exist in the Users table");
@@ -160,6 +166,7 @@ const GoogleSignInButton: React.FC = () => {
     } catch (e: any) {
       console.log("Error: " + e.message);
     }
+    setIsLoading(false);
     navigate('/settings/classes');
   };
 
@@ -171,6 +178,7 @@ const GoogleSignInButton: React.FC = () => {
         : 'bg-cyan-500 text-white hover:bg-cyan-600'
         }`}
     >
+      {isLoading && <LoadingOverlay phrase={loadingPhrase} />}
       <svg className="w-5 h-5" viewBox="0 0 24 24">
         <path
           fill="currentColor"
