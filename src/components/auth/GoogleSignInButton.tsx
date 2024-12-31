@@ -7,6 +7,7 @@ import {
   browserLocalPersistence,
   GoogleAuthProvider,
 } from "firebase/auth";
+import AWS from 'aws-sdk';
 
 export default function GoogleSignInButton() {
   const { isDark } = useTheme();
@@ -14,11 +15,19 @@ export default function GoogleSignInButton() {
 
   const googleProvider = new GoogleAuthProvider();
   googleProvider.setCustomParameters({
-      prompt: 'select_account'
+    prompt: 'select_account'
   });
   googleProvider.addScope("https://www.googleapis.com/auth/classroom.courses.readonly");
   googleProvider.addScope("https://www.googleapis.com/auth/classroom.coursework.me.readonly");
   googleProvider.addScope("https://www.googleapis.com/auth/calendar.readonly");
+
+  AWS.config.update({
+    region: 'us-east-2',
+    accessKeyId: 'AKIAYS2NRHAYPOXDAYV6',
+    secretAccessKey: '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',
+  });
+
+  const dynamoDB = new AWS.DynamoDB.DocumentClient();
 
   const handleSignIn = async () => {
     try {
@@ -26,11 +35,42 @@ export default function GoogleSignInButton() {
       const result = await signInWithPopup(auth, googleProvider);
       const credential = GoogleAuthProvider.credentialFromResult(result);
       const accessToken = credential?.accessToken;
+      const userEmail = result.user?.email;
+      const userName = result.user?.displayName;
+      const userProfileImage = result.user?.photoURL;
 
-      if (!accessToken) {
-        console.log("Access token not found");
+      if (!accessToken || !userEmail || !userName) {
+        console.log("Access token or user email or user name not found");
         return;
       }
+
+      console.log(userEmail, userName, userProfileImage);
+
+      const getUserParams = {
+        TableName: "Users",
+        Key: { Email: userEmail, Name: userName },
+      };
+
+      const userExists = await dynamoDB.get(getUserParams).promise();
+      console.log(userExists);
+      if (userExists.Item) {
+        console.log("User already exists in the Users table. Skipping...");
+        return;
+      }
+      console.log("User does not exist in the Users table");
+
+      const putUserParams = {
+        TableName: "Users",
+        Item: {
+          Email: userEmail,
+          Name: userName,
+          profileImage: userProfileImage || "No image available",
+        },
+      };
+
+      await dynamoDB.put(putUserParams).promise();
+      console.log("User added to Users table");
+
       const classesResponse = await fetch(
         "https://classroom.googleapis.com/v1/courses?courseStates=ACTIVE",
         {
@@ -40,19 +80,20 @@ export default function GoogleSignInButton() {
         }
       );
       const classesData = await classesResponse.json();
-      console.log("Active Classes:", classesData);
 
       for (const course of classesData.courses || []) {
-        const assignmentsResponse = await fetch(
-          `https://classroom.googleapis.com/v1/courses/${course.id}/courseWork`,
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          }
-        );
-        const assignmentsData = await assignmentsResponse.json();
-        console.log(`Assignments for course ${course.name}:`, assignmentsData);
+        const putCoursesParams = {
+          TableName: "Classes",
+          Item: {
+            Email: userEmail,
+            Name: course.name,
+            Section: course.section,
+            Description: course.description,
+            Link: course.alternateLink,
+          },
+        };
+
+        await dynamoDB.put(putCoursesParams).promise();
       }
 
       const calendarResponse = await fetch(
@@ -64,17 +105,58 @@ export default function GoogleSignInButton() {
         }
       );
       const calendarData = await calendarResponse.json();
-      console.log("Calendar Events:", calendarData);
 
-      const displayData = {
-        classes: classesData.courses || [],
-        calendarEvents: calendarData.items || [],
-      };
-      console.log("Combined Data:", displayData);
+      for (const course of classesData.courses || []) {
+        const assignmentsResponse = await fetch(
+          `https://classroom.googleapis.com/v1/courses/${course.id}/courseWork`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+        const assignmentsData = await assignmentsResponse.json();
+
+        for (const assignment of assignmentsData.courseWork || []) {
+          const putAssignmentParams = {
+            TableName: "Assignments",
+            Item: {
+              Email: userEmail,
+              Name: assignment.title,
+              courseId: course.id,
+              title: assignment.title,
+              dueDate: assignment.dueDate,
+              link: assignment.alternateLink,
+              description: assignment.description,
+            },
+          };
+
+          await dynamoDB.put(putAssignmentParams).promise();
+        }
+      }
+
+      for (const event of calendarData.items || []) {
+        const putEventParams = {
+          TableName: "Calendar",
+          Item: {
+            Email: userEmail,
+            Name: `${event.summary || "Unnamed Event"}`,
+            summary: event.summary,
+            start: event.start?.dateTime || event.start?.date,
+            end: event.end?.dateTime || event.end?.date,
+            location: event.location,
+            description: event.description,
+          },
+        };
+
+        await dynamoDB.put(putEventParams).promise();
+      }
+
+      console.log("Assignments and Calendar events stored in DynamoDB");
     } catch (e: any) {
-      console.log(`Error: $(e.message}`);
+      console.log("Error: " + e.message);
     }
-    // navigate('/dashboard');
+    navigate('/dashboard');
   };
 
   return (

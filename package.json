@@ -10,7 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "express": "^4.21.2",
+    "@aws-sdk/client-dynamodb": "^3.716.0",
+    "@aws-sdk/lib-dynamodb": "^3.716.0",
+    "aws-sdk": "^2.1692.0",
     "firebase": "^11.1.0",
     "firebase-admin": "^13.0.2",
     "lucide-react": "^0.344.0",
