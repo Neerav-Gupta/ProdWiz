@@ -1,4 +1,4 @@
-import { User, Mail, Camera, Trash2, Loader2 } from 'lucide-react';
+import { User, Mail, Camera, Trash2 } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../auth/AuthContext';
 import AWS from "aws-sdk";
@@ -20,7 +20,7 @@ export default function GeneralSettings() {
     const dynamoDB = new AWS.DynamoDB.DocumentClient();
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
-    const loadingPhrase = useLoadingPhrases(isLoading)
+    const loadingPhrase = useLoadingPhrases(isLoading);
 
     if (!user) {
         return null;
@@ -39,7 +39,6 @@ export default function GeneralSettings() {
         };
 
         try {
-            // Query items to get all matching keys
             const queryResult = await dynamoDB.query(queryParams).promise();
             const items = queryResult.Items;
             console.log(items)
@@ -82,7 +81,7 @@ export default function GeneralSettings() {
         try {
             const tables = ["Classes", "Assignments", "Calendar", "Users"];
             setIsLoading(true);
-            const deletePromises = tables.map((table) => deleteItemsByEmail(table, user?.email));
+            const deletePromises = tables.map((table) => deleteItemsByEmail(table, user?.email || ""));
             await Promise.all(deletePromises);
             console.log(`Successfully deleted all information for email: ${user?.email}`);
             setIsLoading(false);
@@ -114,9 +113,10 @@ export default function GeneralSettings() {
             <div className="flex items-center space-x-8 mb-8">
                 <div className="relative">
                     <img
-                        src={user.profileImage}
+                        src={user?.profileImage}
                         alt="Profile"
                         className="w-24 h-24 rounded-full"
+                        referrerPolicy="no-referrer" 
                     />
                     <button
                         className={`absolute bottom-0 right-0 p-2 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-100'

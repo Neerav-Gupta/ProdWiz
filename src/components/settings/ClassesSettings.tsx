@@ -3,6 +3,7 @@ import { ChevronRight, Save } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuth } from '../auth/AuthContext';
+import { LoadingOverlay, useLoadingPhrases } from "../loading-overlay";
 import AWS from "aws-sdk";
 
 AWS.config.update({
@@ -11,18 +12,13 @@ AWS.config.update({
     secretAccessKey: 'X4IYyYlErz9c+ITKHlVC30NHM6xQAgMeZ62kpWq/',
 });
 
-interface Class {
-    id: string;
-    name: string;
-    type: 'unknown' | 'academic' | 'extracurricular';
-}
-
 const dynamoDB = new AWS.DynamoDB.DocumentClient();
 
 interface ClassItem {
     Email: string;
     Name: string;
-    [key: string]: any;
+    Type: string;
+    Link: string;
 }
 
 async function fetchClasses(email: any) {
@@ -51,6 +47,8 @@ export default function ClassesSettings() {
     const { user } = useAuth();
     const [classes, setClasses] = useState<ClassItem[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
+    const [isLoading, setIsLoading] = useState(false);
+    const loadingPhrase = useLoadingPhrases(isLoading);
 
     useEffect(() => {
         const getClasses = async () => {
@@ -66,12 +64,46 @@ export default function ClassesSettings() {
         getClasses();
     }, [user]);
 
-    if (loading) {
-        return <p>Loading classes...</p>;
-    }
+    const handleDropdownChange = (name: string, value: string) => {
+        setClasses((prevClasses) => {
+            return prevClasses.map((cls) =>
+                cls.Name === name ? { ...cls, Type: value } : cls
+            );
+        });
+    };
+
+    const handleUpdate = async () => {
+        setIsLoading(true);
+        try {
+            const updatePromises = classes.map((cls) => {
+                const params = {
+                    TableName: "Classes",
+                    Key: {
+                        Email: user?.email,
+                        Name: cls.Name,
+                    },
+                    UpdateExpression: "SET #type = :type",
+                    ExpressionAttributeNames: {
+                        "#type": "Type",
+                    },
+                    ExpressionAttributeValues: {
+                        ":type": cls.Type,
+                    },
+                };
+                return dynamoDB.update(params).promise();
+            });
+
+            await Promise.all(updatePromises);
+            console.log("Database updated successfully!");
+        } catch (error) {
+            console.error("Error updating database:", error);
+        }
+        setIsLoading(false);
+    };
 
     return (
         <div>
+            {isLoading && <LoadingOverlay phrase={loadingPhrase} />}
             <h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 Classes Settings
             </h2>
@@ -103,27 +135,29 @@ export default function ClassesSettings() {
                                 </tr>
                             </thead>
                             <tbody className={`${isDark ? 'text-gray-300' : 'text-gray-900'} divide-y divide-gray-200 dark:divide-gray-700`}>
-                                {classes.map((classItem) => (
-                                    <tr>
+                                {classes.map((classItem, index) => (
+                                    <tr key={index}>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             {classItem.Name}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <select
+                                                id={`class-${classItem.Name}`}
                                                 defaultValue={classItem.Type}
+                                                onChange={(e) => handleDropdownChange(classItem.Name, e.target.value)}
                                                 className={`rounded-lg ${isDark
                                                     ? 'bg-gray-700 text-white border-gray-600'
                                                     : 'bg-white text-gray-900 border-gray-300'
                                                     } border shadow-sm focus:ring-cyan-500 focus:border-cyan-500 p-2`}
                                             >
-                                                <option value="unknown">Unknown</option>
-                                                <option value="academic">Academic</option>
-                                                <option value="extracurricular">Extracurricular</option>
+                                                <option value="Unknown">Unknown</option>
+                                                <option value="Academic">Academic</option>
+                                                <option value="Extracurricular">Extracurricular</option>
                                             </select>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <button
-                                                onClick={() => { window.location.href = classItem.link; }}
+                                                onClick={() => { window.location.href = classItem.Link; }}
                                                 className="inline-flex items-center px-4 py-2 rounded-lg bg-cyan-500 text-white hover:bg-cyan-600"
                                             >
                                                 View Class
@@ -138,6 +172,7 @@ export default function ClassesSettings() {
                     <div className="mt-6">
                         <button
                             className="inline-flex items-center px-4 py-2 rounded-lg bg-cyan-500 text-white hover:bg-cyan-600"
+                            onClick={handleUpdate}
                         >
                             <Save className="w-4 h-4 mr-2" />
                             Update Classes

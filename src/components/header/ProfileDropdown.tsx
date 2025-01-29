@@ -12,7 +12,6 @@ interface ProfileDropdownProps {
 export default function ProfileDropdown({ isOpen, onClose, isDark }: ProfileDropdownProps) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate(); 
-  console.log(user?.profileImage);
 
   if (!user) {
     return null;
@@ -35,6 +34,7 @@ export default function ProfileDropdown({ isOpen, onClose, isDark }: ProfileDrop
           src={user.profileImage}
           alt="Profile"
           className="w-8 h-8 rounded-full"
+          referrerPolicy="no-referrer" 
         />
       </button>
 

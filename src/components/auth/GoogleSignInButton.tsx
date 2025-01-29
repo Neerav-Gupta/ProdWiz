@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../hooks/useTheme';
 import { auth } from './googleAuth';
+import { useAuth } from '../auth/AuthContext';
 import {
   signInWithPopup,
   setPersistence,
@@ -14,6 +15,7 @@ import { LoadingOverlay, useLoadingPhrases } from '../loading-overlay';
 const GoogleSignInButton: React.FC = () => {
   const { isDark } = useTheme();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const loadingPhrase = useLoadingPhrases(isLoading);
 
@@ -35,6 +37,11 @@ const GoogleSignInButton: React.FC = () => {
 
   const handleSignIn = async () => {
     setIsLoading(true);
+    if (user) {
+      console.log("User already signed in");
+      navigate('/dashboard');
+      return;
+    }
     let userEmail: string | null = "";
     let userName: string | null = "";
     let userProfileImage: string | null = "";
@@ -65,6 +72,7 @@ const GoogleSignInButton: React.FC = () => {
         console.log("User already exists in the Users table. Skipping...");
         setIsLoading(false);
         navigate('/dashboard');
+        return;
       }
       console.log("User does not exist in the Users table");
 
@@ -99,7 +107,7 @@ const GoogleSignInButton: React.FC = () => {
             Section: course.section,
             Description: course.description,
             Link: course.alternateLink,
-            Type: "unknown",
+            Type: "Unknown",
           },
         };
 
